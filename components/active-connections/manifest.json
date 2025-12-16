@@ -1,0 +1,11 @@
+{
+  "main": "pct-active-connections.min.js",
+  "version": "13",
+  "sheetSettings": {
+    "defaultCols": 6,
+    "defaultRows": 6,
+    "minCols": 3,
+    "minRows": 3
+  },
+  "inputs": []
+}
