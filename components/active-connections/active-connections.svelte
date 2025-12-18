@@ -1,18 +1,12 @@
 <script lang="ts">
   import type { ComponentContext } from "@ixon-cdk/types";
   import { onMount } from "svelte";
-  import { formatDistanceToNow } from "date-fns";
-  import type { Agent } from "./models/agent";
-  import type { User } from "./models/user";
   import type { ActiveConnection } from "./models/active-connection";
   import { ApiService } from "./services/api.service";
 
-  export let context: ComponentContext;
-
   type Column = "userName" | "userEmail" | "agentName" | "duration";
 
-  // let name = "Ian";
-  // let url = "";
+  export let context: ComponentContext;
   let search = "";
   let sortColumn: Column = "duration";
   let sortDirection: "asc" | "desc" = "desc";
@@ -28,13 +22,10 @@
   ];
 
   let activeConnections: ActiveConnection[] = [];
-
-  // let generatedConnections: ActiveConnection[] = [];
-
   let tableWidth = 0;
   let tableScrollTop = 0;
 
-  $: visibleConnections = search
+  $: filteredConnections = search
     ? activeConnections.filter((connection) => {
         const s = search.toLowerCase();
         return (
@@ -44,10 +35,8 @@
         );
       })
     : activeConnections;
-
-  $: isNarrow = tableWidth < 320;
-
-  $: sortedConnections = [...visibleConnections].sort((a, b) => {
+  // $: isNarrow = tableWidth < 320; Maybe for later
+  $: sortedConnections = [...filteredConnections].sort((a, b) => {
     let aValue: string | number = a[sortColumn]!;
     let bValue: string | number = b[sortColumn]!;
 
@@ -70,6 +59,10 @@
     return 0;
   });
 
+  /**
+   * Ensures the sorting arrow is correctly positioned
+   * Resets to duration
+   */
   function handleSort(column: typeof sortColumn) {
     if (sortColumn !== column) {
       sortColumn = column;
@@ -82,57 +75,13 @@
     }
   }
 
-  // export function formatTimeDistance(datetimeString: string) {
-  //   if (!datetimeString) {
-  //     return "Invalid date";
-  //   }
-
-  //   // Convert the ISO string into a JavaScript Date object
-  //   const dateToCompare = new Date(datetimeString);
-
-  //   // Use formatDistanceToNow with the key option
-  //   const distance = formatDistanceToNow(dateToCompare, {
-  //     addSuffix: false, // <-- KEY: Removes 'ago' or 'from now'
-  //     includeSeconds: true,
-  //   });
-
-  //   return distance;
-  // }
-
-  // export function getDistanceInMilliseconds(datetimeString: string) {
-  //   if (!datetimeString) {
-  //     return 0;
-  //   }
-
-  //   const dateToCompare = new Date(datetimeString);
-  //   const now = new Date();
-
-  //   // The getTime() method returns the number of milliseconds since the Unix Epoch (1970/01/01)
-  //   const differenceMs = now.getTime() - dateToCompare.getTime();
-
-  //   // We use Math.abs() to return a positive number, representing the absolute duration.
-  //   return Math.abs(differenceMs);
-  // }
-
-  // function getRandomDatetimeString() {
-  //   const now = new Date();
-  //   const daysAgo = Math.floor(Math.random() * 30);
-  //   const hoursAgo = Math.floor(Math.random() * 24);
-  //   const minutesAgo = Math.floor(Math.random() * 60);
-  //   const randomDate = new Date(
-  //     now.getFullYear(),
-  //     now.getMonth(),
-  //     now.getDate() - daysAgo,
-  //     now.getHours() - hoursAgo,
-  //     now.getMinutes() - minutesAgo
-  //   );
-  //   return randomDate.toISOString();
-  // }
-
   function handleTableScroll(event: Event): void {
     tableScrollTop = (event.target as HTMLDivElement).scrollTop;
   }
 
+  /**
+   * For the hovered item, if the text is ellipsed, show the title (tooltip)
+   */
   function showTooltipIfEllipsed(event: MouseEvent, text: string) {
     const target = event.currentTarget as HTMLElement;
     if (target.scrollWidth > target.clientWidth) {
@@ -155,6 +104,8 @@
   onMount(() => {
     const client = context.createResourceDataClient();
     const apiService = new ApiService(context);
+
+    //* just examples, perhaps for later use
     // client.query([
     //   { selector: 'Agent', fields: ['name', 'connectedUsers'] }
     // ], result => {
@@ -165,28 +116,18 @@
     //   name = context.inputs.name;
     // }
 
-    // const generatedConnectionsCount = 50;
-    // generatedConnections = [];
-    // for (let i = 0; i < generatedConnectionsCount; i++) {
-    //   const datetime = getRandomDatetimeString();
-    //   generatedConnections.push({
-    //     userName: `Name${i + 1}`,
-    //     userId: `UserId${i + 1}`,
-    //     userEmail: `name${i + 1}@gmail.com`,
-    //     agentId: `agentId${i + 1}`,
-    //     agentName: `agentName${i + 1}`,
-    //     duration: datetime,
-    //     durationString: formatTimeDistance(datetime),
-    //     durationMillis: getDistanceInMilliseconds(datetime),
-    //   });
-    // }
-
     // Get the connections immediately
     getActiveConnections(apiService);
     // After this, update the connections every 10 seconds
-    window.setInterval(function () {
+    const interval = window.setInterval(function () {
       getActiveConnections(apiService);
     }, 10000);
+
+    // Clear the connection when the component is no longer visible
+    return () => {
+      clearInterval(interval);
+      client.destroy();
+    };
   });
 </script>
 
@@ -338,19 +279,6 @@
     scrollbar-gutter: stable;
     scrollbar-width: thin;
   }
-
-  // .custom-tooltip {
-  //   position: fixed;
-  //   background: #fff;
-  //   color: #222;
-  //   padding: 6px 16px;
-  //   border-radius: 4px;
-  //   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
-  //   white-space: nowrap;
-  //   z-index: 1000;
-  //   font-size: 13px;
-  //   pointer-events: none;
-  // }
 
   .no-active-connections {
     font-size: 14px;
