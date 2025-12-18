@@ -2,12 +2,9 @@ import type { ComponentContext } from "@ixon-cdk/types";
 import type { Agent } from "../models/agent";
 import type { User } from "../models/user";
 import type { ActiveConnection } from "../models/active-connection";
-  import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 
 export class ApiService {
-
-  
-
   context: ComponentContext;
   headers: Record<string, string>;
 
@@ -22,48 +19,77 @@ export class ApiService {
     };
   }
 
+  /**
+   * The amount of audit logs being collected for each agent
+   * ! CAREFUL: This can get out of hand quickly if you're dealing with hundreds of agents (= hundreds of requests)
+   */
   createAgentAuditlogUrl(agentId: string) {
     return this.context.getApiUrl("AgentAuditLogList", {
       agentId,
-      // The amount of audit logs being collected for each agent
-      // ! Careful, this can get out of hand quickly if you're dealing with thousands of agents
       "page-size": "500",
       filters: 'in(target,"AgentConnectedUser")',
       // "AgentDisconnectedUser"
     });
   }
 
+  /**
+   * Collects a subset of data
+   * If there is more, keep collecting until you have them all
+   */
+  private async fetchAllPaginated<T>(urlWithParams: string, options: RequestInit): Promise<T[]> {
+    let allItems: T[] = [];
+    let moreAfter: string | undefined = undefined;
+    const baseParams = new URL(urlWithParams).searchParams;
+    const baseUrl = urlWithParams.split('?')[0];
 
+    do {
+      let url = new URL(baseUrl);
+      baseParams.forEach((value, key) => url.searchParams.append(key, value));
+      if (moreAfter) {
+        url.searchParams.append('page-after', moreAfter);
+      }
+
+      const res = await fetch(url.toString(), options);
+      const data = await res.json();
+      allItems = allItems.concat(data.data || []);
+      if (data.moreAfter === moreAfter) break;
+      moreAfter = data.moreAfter;
+    } while (moreAfter);
+
+    return allItems;
+  }
+
+  /**
+   * Retrieves all active connections
+   */
   async getActiveConnections(): Promise<ActiveConnection[]> {
-
-      const usersUrl = this.context.getApiUrl("UserList", {
+    const usersUrl = this.context.getApiUrl("UserList", {
+      "page-size": "4000",
       fields: "publicId, name, emailAddress",
     });
 
     const agentsUrl = this.context.getApiUrl("AgentList", {
+      "page-size": "4000",
       fields:
         "name,activeStatus,activeVpnSession.rscServer.name,activeVpnSession.rscServer.publicId,activeVpnSession.rscServer.supportedLayers,activeVpnSession.vpnAddress, activeVpnSession.startedOn, vpnChangedOn, connectedUsers",
     });
     const options = { method: "GET", headers: this.headers };
 
     return await Promise.all([
-      fetch(agentsUrl, options).then((res) => res.json()),
-      fetch(usersUrl, options).then((res) => res.json()),
-    ]).then(async ([agentsRes, usersRes]) => {
-      const agents: Agent[] = agentsRes.data.filter((a: Agent) => a.connectedUsers.length > 0);
-      const users: User[] = usersRes.data;
+      this.fetchAllPaginated<Agent>(agentsUrl, options),
+      this.fetchAllPaginated<User>(usersUrl, options),
+    ]).then(async ([agents, users]) => {
+      const agentsWithConnections: Agent[] = agents.filter((a: Agent) => a.connectedUsers.length > 0);
 
-      // const agentsWithActiveConnections = agents.filter(a => a.connectedUsers.length > 0);
-
-     const results = await Promise.all(
-        agents.map((agent) => fetch(this.createAgentAuditlogUrl(agent.publicId), options)
+      const results = await Promise.all(
+        agentsWithConnections.map((agent) => fetch(this.createAgentAuditlogUrl(agent.publicId), options)
           .then((res) => res.json())
           .then((res) => ({ agent, logs: res.data }))
         )
       );
       const auditLogsAll = results;
       let activeConnections: ActiveConnection[] = [];
-      for (let agent of agents) {
+      for (let agent of agentsWithConnections) {
         const auditLogs = auditLogsAll.find(
           (log) => agent.publicId === log.agent.publicId
         )?.logs;
@@ -85,7 +111,7 @@ export class ApiService {
               agentId: agent.publicId,
               agentName: agent.name,
               duration: log.time,
-              durationString: this.formatTimeDistance(log.time),
+              durationString: this.getDistanceString(log.time),
               durationMillis: this.getDistanceInMilliseconds(log.time),
             },
           ];
@@ -96,7 +122,10 @@ export class ApiService {
     });
   }
 
-  formatTimeDistance(datetimeString: string) {
+  /**
+   * Takes the datetime string, and converts into a distance string ('35 minutes')
+   */
+  getDistanceString(datetimeString: string): string {
     if (!datetimeString) {
       return "Invalid date";
     }
@@ -113,6 +142,10 @@ export class ApiService {
     return distance;
   }
 
+  /**
+   * Returns the distance in milliseconds
+   * Used for determining the order of the durations 
+   */
   getDistanceInMilliseconds(datetimeString: string) {
     if (!datetimeString) {
       return 0;
