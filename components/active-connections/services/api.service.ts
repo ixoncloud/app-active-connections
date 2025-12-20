@@ -3,6 +3,7 @@ import type { Agent } from "../models/agent";
 import type { User } from "../models/user";
 import type { ActiveConnection } from "../models/active-connection";
 import { formatDistanceToNow } from "date-fns";
+import * as locale from 'date-fns/locale'
 
 export class ApiService {
   context: ComponentContext;
@@ -133,10 +134,14 @@ export class ApiService {
     // Convert the ISO string into a JavaScript Date object
     const dateToCompare = new Date(datetimeString);
 
-    // Use formatDistanceToNow with the key option
+    const languageKey = (this.context.appData.language).replace('-','') as keyof typeof locale;
+    const localeKey = (this.context.appData.locale).replace('-','') as keyof typeof locale;
+    // First try the language, then the locale, otherwise default to English (GB)
+    const selectedLocale = (locale[languageKey] as locale.Locale) ?? (locale[localeKey] as locale.Locale) ??  locale["enGB"];
     const distance = formatDistanceToNow(dateToCompare, {
-      addSuffix: false, // <-- KEY: Removes 'ago' or 'from now'
+      addSuffix: false, // Removes 'ago' or 'from now'
       includeSeconds: true,
+      locale: selectedLocale,
     });
 
     return distance;
