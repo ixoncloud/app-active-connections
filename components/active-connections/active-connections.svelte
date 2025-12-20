@@ -15,15 +15,17 @@
     name: string;
     navigationUrl?: string;
   }[] = [
-    { id: "userName", name: "User" },
-    { id: "userEmail", name: "Email" },
-    { id: "agentName", name: "Router", navigationUrl: "/devices/" },
-    { id: "duration", name: "Duration" },
+    { id: "userName", name: "USER" },
+    { id: "userEmail", name: "EMAIL" },
+    { id: "agentName", name: "ROUTER", navigationUrl: "/devices/" },
+    { id: "duration", name: "DURATION" },
   ];
 
   let activeConnections: ActiveConnection[] = [];
   let tableWidth = 0;
   let tableScrollTop = 0;
+  let searchPlaceholderString = "Search";
+  let titleString = "Active Connections";
 
   $: filteredConnections = search
     ? activeConnections.filter((connection) => {
@@ -105,6 +107,18 @@
     const client = context.createResourceDataClient();
     const apiService = new ApiService(context);
 
+    searchPlaceholderString = context.translate("SEARCH", undefined, {
+      source: "global",
+    });
+    titleString = context.translate("ACTIVE_CONNECTIONS", undefined, {
+      source: "global",
+    });
+    // If no translation is found, default to english
+    // TODO: Remove this once the translation is available in production
+    if (titleString === "ACTIVE_CONNECTIONS") {
+      titleString = "Active Connections";
+    }
+
     //* just examples, perhaps for later use
     // client.query([
     //   { selector: 'Agent', fields: ['name', 'connectedUsers'] }
@@ -134,7 +148,7 @@
 <main>
   <div class="card">
     <div class="card-header with-actions">
-      <h3 class="card-title">Active Connections</h3>
+      <h3 class="card-title">{titleString}</h3>
       <div class="search-input-container">
         <div class="search-input-prefix">
           <svg width="24" height="24" viewBox="0 0 24 24">
@@ -144,7 +158,11 @@
             />
           </svg>
         </div>
-        <input class="search-input" placeholder="Search" bind:value={search} />
+        <input
+          class="search-input"
+          placeholder={searchPlaceholderString}
+          bind:value={search}
+        />
       </div>
     </div>
     <div class="card-content">
@@ -166,7 +184,11 @@
                     on:click={() => handleSort(column.id)}
                   >
                     <div class="column-header">
-                      <span class="column-name">{column.name}</span>
+                      <span class="column-name"
+                        >{context.translate(column.name, undefined, {
+                          source: "global",
+                        })}</span
+                      >
                       <span class="sort-arrow">
                         {#if sortColumn === column.id}
                           {#if sortDirection === "asc"}
