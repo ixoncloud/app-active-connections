@@ -262,9 +262,8 @@
                               connection[column.id] !== "-"
                             ? `${getCompanyUrl() + column.navigationUrl + connection.agentId}`
                             : undefined}
-                        class:hasNavigationUrl={!!column.navigationUrl ||
-                          (column.id === "userEmail" &&
-                            connection[column.id] !== "-")}
+                        class:hasNavigationUrl={connection[column.id] !== "-" &&
+                          (!!column.navigationUrl || column.id === "userEmail")}
                         >{column.id !== "duration"
                           ? connection[column.id]
                           : connection["durationString"]}</a
