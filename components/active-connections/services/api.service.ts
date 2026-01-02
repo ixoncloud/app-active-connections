@@ -155,14 +155,11 @@ export class ApiService {
     if (!datetimeString) {
       return 0;
     }
-
     const dateToCompare = new Date(datetimeString);
     const now = new Date();
 
-    // The getTime() method returns the number of milliseconds since the Unix Epoch (1970/01/01)
+    // Get the difference between now and when the connection was created
     const differenceMs = now.getTime() - dateToCompare.getTime();
-
-    // We use Math.abs() to return a positive number, representing the absolute duration.
-    return Math.abs(differenceMs);
+    return differenceMs;
   }
 }
