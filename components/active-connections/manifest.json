@@ -1,6 +1,6 @@
 {
   "main": "pct-active-connections.min.js",
-  "version": "18",
+  "version": "21",
   "sheetSettings": {
     "defaultCols": 6,
     "defaultRows": 6,

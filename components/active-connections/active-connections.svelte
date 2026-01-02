@@ -17,7 +17,11 @@
   }[] = [
     { id: "userName", name: "USER" },
     { id: "userEmail", name: "EMAIL" },
-    { id: "agentName", name: "ROUTER", navigationUrl: "/devices/" },
+    {
+      id: "agentName",
+      name: "ROUTER",
+      navigationUrl: "/fleet-manager/device-configurator/",
+    },
     { id: "duration", name: "DURATION" },
   ];
 
@@ -101,6 +105,16 @@
     apiService.getActiveConnections().then((connections) => {
       activeConnections = connections;
     });
+  }
+
+  /**
+   * Extract the company Url from the context
+   */
+  function getCompanyUrl() {
+    const url = context.componentBaseUrl;
+    const idx = url.indexOf("/", url.indexOf("//") + 2);
+    const parts = idx === -1 ? [url] : [url.slice(0, idx), url.slice(idx + 1)];
+    return parts[0];
   }
 
   onMount(() => {
@@ -244,24 +258,13 @@
                         href={column.id === "userEmail" &&
                         connection[column.id] !== "-"
                           ? `mailto:${connection[column.id]}`
-                          : undefined}
+                          : column.id === "agentName" &&
+                              connection[column.id] !== "-"
+                            ? `${getCompanyUrl() + column.navigationUrl + connection.agentId}`
+                            : undefined}
                         class:hasNavigationUrl={!!column.navigationUrl ||
                           (column.id === "userEmail" &&
                             connection[column.id] !== "-")}
-                        on:click={() =>
-                          column.navigationUrl
-                            ? context.navigateByUrl(
-                                column.navigationUrl + connection.agentId
-                              )
-                            : undefined}
-                        on:keydown={(e) => {
-                          if (
-                            column.navigationUrl &&
-                            (e.key === "Enter" || e.key === " ")
-                          ) {
-                            context.navigateByUrl(column.navigationUrl);
-                          }
-                        }}
                         >{column.id !== "duration"
                           ? connection[column.id]
                           : connection["durationString"]}</a
