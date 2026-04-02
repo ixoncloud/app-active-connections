@@ -15,7 +15,7 @@
     name: string;
     navigationUrl?: string;
   }[] = [
-    { id: "userName", name: "USER" },
+    { id: "userName", name: "USER", navigationUrl: "/admin/users/" },
     { id: "userEmail", name: "EMAIL" },
     {
       id: "agentName",
@@ -247,8 +247,8 @@
                           String(
                             column.id !== "duration"
                               ? connection[column.id]
-                              : connection["durationString"]
-                          )
+                              : connection["durationString"],
+                          ),
                         )}
                     >
                       <a
@@ -261,7 +261,10 @@
                           : column.id === "agentName" &&
                               connection[column.id] !== "-"
                             ? `${getCompanyUrl() + column.navigationUrl + connection.agentId}`
-                            : undefined}
+                            : column.id === "userName" &&
+                                connection[column.id] !== "-"
+                              ? `${getCompanyUrl() + column.navigationUrl + connection.userId}`
+                              : undefined}
                         class:hasNavigationUrl={connection[column.id] !== "-" &&
                           (!!column.navigationUrl || column.id === "userEmail")}
                         >{column.id !== "duration"
